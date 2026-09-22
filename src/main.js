@@ -93,7 +93,7 @@ const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
 camera.position.set(0.9, -0.5, 9);
 
 const key = new THREE.DirectionalLight(0xffffff, 0.55); key.position.set(-3, 4, 6); scene.add(key);
-const fill = new THREE.DirectionalLight(0xbcd4ff, 0.25); fill.position.set(4, -2, 3); scene.add(fill);
+const fill = new THREE.DirectionalLight(0xbcd4ff, 0); fill.position.set(4, -2, 3); scene.add(fill);   // éteinte : son reflet spéculaire direct produisait un point blanc net à certains angles
 const back = new THREE.DirectionalLight(0xffffff, 0.35); back.position.set(3, 3, -6); scene.add(back);
 
 const materials = {
