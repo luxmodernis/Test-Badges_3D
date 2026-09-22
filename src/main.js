@@ -26,7 +26,7 @@ const LAYERS = {
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.0;
+renderer.toneMappingExposure = 1.3;
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
@@ -44,7 +44,7 @@ function studioEnvironment() {
   // fond : dégradé vertical (plafond gris sombre -> horizon -> sol très sombre)
   const sky = canvasTex(4, 256, (c, w, h) => {
     const g = c.createLinearGradient(0, 0, 0, h);
-    g.addColorStop(0, '#5a5f69'); g.addColorStop(0.5, '#33363d'); g.addColorStop(0.62, '#23252a'); g.addColorStop(1, '#101114');
+    g.addColorStop(0, '#6b707a'); g.addColorStop(0.5, '#494c55'); g.addColorStop(0.62, '#3a3c42'); g.addColorStop(1, '#26282d');
     c.fillStyle = g; c.fillRect(0, 0, w, h);
   });
   env.add(new THREE.Mesh(new THREE.SphereGeometry(40, 32, 16),
@@ -375,15 +375,15 @@ const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 let targetY = -0.25, pausedUntil = 0;
 const pause = (ms = 3000) => { pausedUntil = performance.now() + ms; };
 renderer.domElement.addEventListener('pointerdown', () => pause(1e9));
-addEventListener('pointerup', () => pause(3000));
-addEventListener('wheel', () => pause(3000), { passive: true });
+addEventListener('pointerup', () => pause(0));       // reprend dès qu'on relâche, sans temps mort
+addEventListener('wheel', () => pause(0), { passive: true });
 
 // bouton Face / Dos : demi-tour depuis l'orientation courante
 const btn = document.getElementById('flip');
 const facingBack = () => Math.cos(holder.rotation.y + 0.25) < 0;
 if (btn) btn.addEventListener('click', () => {
   targetY = holder.rotation.y + Math.PI;                          // demi-tour simple
-  pause(4000);
+  pause(0);                                                        // reprend dès la fin du clic, se fond dans le demi-tour
 });
 
 function resize() {
