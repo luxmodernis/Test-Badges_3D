@@ -54,7 +54,7 @@ function studioEnvironment() {
   const softbox = (w, h, pos, power, tint = '#ffffff', grad = 0) => {
     const tex = canvasTex(256, 256, (c, W, H) => {
       c.fillStyle = '#000'; c.fillRect(0, 0, W, H);
-      c.filter = 'blur(24px)';
+      c.filter = 'blur(46px)';
       const g = c.createLinearGradient(0, 0, W, H);
       g.addColorStop(0, '#fff'); g.addColorStop(1, `rgb(${255 * (1 - grad)},${255 * (1 - grad)},${255 * (1 - grad)})`);
       c.fillStyle = g; c.fillRect(56, 56, W - 112, H - 112);
@@ -68,9 +68,10 @@ function studioEnvironment() {
   const bands = (w, h, pos, power) => {
     const tex = canvasTex(256, 256, (c, W, H) => {
       const g = c.createLinearGradient(0, 0, W, H * 0.55);
-      [[0, '#2c2c2c'], [0.14, '#2c2c2c'], [0.24, '#9a9a9a'], [0.32, '#ffffff'], [0.62, '#eeeeee'], [0.72, '#c8c8c8'],
-       [0.77, '#161616'], [0.83, '#161616'], [0.90, '#bdbdbd'], [1, '#e6e6e6']].forEach(([o, col]) => g.addColorStop(o, col));
+      [[0, '#4a4a4a'], [0.18, '#565656'], [0.30, '#8a8a8a'], [0.40, '#c8c8c8'], [0.62, '#d8d8d8'],
+       [0.75, '#7c7c7c'], [0.87, '#4a4a4a'], [1, '#6e6e6e']].forEach(([o, col]) => g.addColorStop(o, col));
       c.fillStyle = g; c.fillRect(0, 0, W, H);
+      c.filter = 'blur(18px)'; c.drawImage(c.canvas, 0, 0);
     });
     const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h),
       new THREE.MeshBasicMaterial({ map: tex, color: new THREE.Color(power, power, power), side: THREE.DoubleSide, toneMapped: false }));
@@ -86,14 +87,14 @@ function studioEnvironment() {
   return env;
 }
 const pmrem = new THREE.PMREMGenerator(renderer);
-scene.environment = pmrem.fromScene(studioEnvironment(), 0.02).texture;
+scene.environment = pmrem.fromScene(studioEnvironment(), 0.09).texture;
 
 const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
 camera.position.set(0.9, -0.5, 9);
 
-const key = new THREE.DirectionalLight(0xffffff, 1.0); key.position.set(-3, 4, 6); scene.add(key);
-const fill = new THREE.DirectionalLight(0xbcd4ff, 0.3); fill.position.set(4, -2, 3); scene.add(fill);
-const back = new THREE.DirectionalLight(0xffffff, 0.6); back.position.set(3, 3, -6); scene.add(back);
+const key = new THREE.DirectionalLight(0xffffff, 0.55); key.position.set(-3, 4, 6); scene.add(key);
+const fill = new THREE.DirectionalLight(0xbcd4ff, 0.25); fill.position.set(4, -2, 3); scene.add(fill);
+const back = new THREE.DirectionalLight(0xffffff, 0.35); back.position.set(3, 3, -6); scene.add(back);
 
 const materials = {
   metal: new THREE.MeshPhysicalMaterial({
@@ -386,10 +387,12 @@ if (btn) btn.addEventListener('click', () => {
 });
 
 function resize() {
-  renderer.setSize(innerWidth, innerHeight);
-  camera.aspect = innerWidth / innerHeight;
+  const w = innerWidth || 1, h = innerHeight || 1;   // certains navigateurs rapportent 0×0 le temps d'une image
+  renderer.setSize(w, h);
+  camera.aspect = w / h;
   const fitH = 4.2 * 1.35 / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)));
-  camera.position.setLength(Math.max(fitH, fitH / camera.aspect * 0.95));
+  const len = Math.max(fitH, fitH / camera.aspect * 0.95);
+  if (Number.isFinite(len) && len > 0) camera.position.setLength(len);   // sinon on garde la dernière position valide
   camera.updateProjectionMatrix();
 }
 addEventListener('resize', resize); resize();
@@ -402,4 +405,22 @@ renderer.setAnimationLoop(() => {
   if (btn) { const t = facingBack() ? 'Voir la face' : 'Voir le dos'; if (t !== lastLabel) btn.textContent = lastLabel = t; }
   controls.update(); renderer.render(scene, camera);
 });
-window.__b = { scene, camera, holder, controls, freeze: () => pause(1e12), setY: (y) => { targetY = y; } };
+
+// Capture PNG (fond transparent) à une taille et une orientation données : __b.capture(largeur, hauteur, rotationY)
+async function capture(w, h, rotY, rotX = 0.08) {
+  pause(1e12);
+  const saved = { rx: holder.rotation.x, ry: holder.rotation.y, tY: targetY, pos: camera.position.clone(), aspect: camera.aspect };
+  targetY = rotY; holder.rotation.set(rotX, rotY, 0);
+  renderer.setPixelRatio(1); renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  const fitH = 4.2 * 1.28 / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)));
+  camera.position.set(0.9, -0.5, 9).setLength(Math.max(fitH, fitH / camera.aspect));
+  controls.target.set(0, 0, 0); camera.lookAt(0, 0, 0); camera.updateProjectionMatrix();
+  renderer.render(scene, camera);
+  const blob = await new Promise(r => renderer.domElement.toBlob(r, 'image/png'));
+  holder.rotation.set(saved.rx, saved.ry, 0); targetY = saved.tY; camera.position.copy(saved.pos);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); resize();
+  pausedUntil = performance.now() + 3000;
+  return blob;
+}
+window.__b = { capture, renderer, scene, camera, holder, controls, freeze: () => pause(1e12), setY: (y) => { targetY = y; } };
